@@ -54,18 +54,17 @@ public class Plugin implements Comparable<Plugin> {
 			if (!location.delete()) {
 				throw new IOException("Unable to delete: " + location);
 			}
-			
+
 			Map<String, PluginInfo> manifest = readBpmManifest();
-			if(manifest == null){
+			if (manifest == null) {
 				manifest = new HashMap<String, PluginInfo>();
 			}
-			if(manifest.containsKey(name)){
+			if (manifest.containsKey(name)) {
 				List<String> remainingFiles = manifest.get(name).installedFiles;
-				for(String file: remainingFiles){
+				for (String file : remainingFiles) {
 					File f = new File(file);
 					f.delete();
-					if(!f.getParentFile().getAbsoluteFile()
-							.equals(BukkitPackageManager.plugins.getAbsoluteFile())){
+					if (!f.getParentFile().getAbsoluteFile().equals(BukkitPackageManager.plugins.getAbsoluteFile())) {
 						f.getParentFile().delete();
 					}
 				}
@@ -82,23 +81,39 @@ public class Plugin implements Comparable<Plugin> {
 		System.out.println("Downloading: " + name);
 
 		File temp = null;
-		try {
-			temp = Source.SOURCES.get(0).downloadPlugin(name);
-		} catch (HttpStatusException e) {
+		for (Source src : Source.SOURCES) {
+			try {
+				temp = src.downloadPlugin(name);
+				break;
+			} catch (HttpStatusException e) {
+				if (BukkitPackageManager.verbose) {
+					e.printStackTrace();
+				}
+			}
+		}
+		System.out.print("\r                          \n");
+		if (temp == null) {
 			throw new Exception("Plugin not found: " + name);
 		}
 
+		String oldName = name;
 		getPackageInfoFromArchive(temp);
+		if (!name.equalsIgnoreCase(oldName)) {
+			throw new Exception("Plugin not found: " + oldName
+					+ " (downloaded plugin '" + name + "' doesn't match)");
+		}
 
 		for (Plugin p : Plugin.installed()) {
-			if(BukkitPackageManager.verbose){
+			if (BukkitPackageManager.verbose) {
 				System.out.println("Checking installed plugin " + p.name);
 			}
 			if (p.name.equals(name)) {
-				String resp = BukkitPackageManager.console
-						.readLine("Overwrite: " + p.name + " " + p.version + " with " + version + "? [y/n] ");
-				if (!resp.toLowerCase().startsWith("y")) {
-					return;
+				if (!BukkitPackageManager.noPromptOverwrite) {
+					System.out.print("Overwrite: " + p.name + " " + p.version + " with " + version + "? [y/n] ");
+					String resp = BukkitPackageManager.consoleIn.readLine();
+					if (!resp.toLowerCase().startsWith("y")) {
+						return;
+					}
 				}
 
 				p.uninstall();
@@ -114,18 +129,18 @@ public class Plugin implements Comparable<Plugin> {
 	protected void install(File temp) throws Exception {
 		List<String> files = new ArrayList<String>();
 		if (type == PluginType.JAR) {
-			if(BukkitPackageManager.verbose){
+			if (BukkitPackageManager.verbose) {
 				System.out.println("Install type: jar");
 			}
 			File dest = new File(BukkitPackageManager.plugins, name + "-" + version + ".jar");
-			if(BukkitPackageManager.verbose){
+			if (BukkitPackageManager.verbose) {
 				System.out.println(temp + " -> " + dest);
 			}
 			temp.renameTo(dest);
 			files.add(dest.getPath());
 			location = dest;
 		} else {
-			if(BukkitPackageManager.verbose){
+			if (BukkitPackageManager.verbose) {
 				System.out.println("Install type: zip");
 			}
 			ZipFile source = new ZipFile(temp);
@@ -134,14 +149,14 @@ public class Plugin implements Comparable<Plugin> {
 				ZipEntry zipEnt = entries.nextElement();
 				File copy = copyOut(source, zipEnt);
 				File dest = new File(BukkitPackageManager.plugins, zipEnt.getName());
-				if(BukkitPackageManager.verbose){
+				if (BukkitPackageManager.verbose) {
 					System.out.println(copy + " -> " + dest);
 				}
 				dest.getParentFile().mkdirs();
 				copy.renameTo(dest);
 				files.add(dest.getPath());
 				if (zipEnt.getName().endsWith(".jar")) {
-					if(BukkitPackageManager.verbose){
+					if (BukkitPackageManager.verbose) {
 						System.out.println("Main jar: " + zipEnt.getName());
 					}
 					location = dest;
@@ -149,12 +164,12 @@ public class Plugin implements Comparable<Plugin> {
 			}
 			source.close();
 		}
-		
+
 		Map<String, PluginInfo> manifest = readBpmManifest();
-		if(manifest == null){
+		if (manifest == null) {
 			manifest = new HashMap<String, PluginInfo>();
 		}
-		if(manifest.containsKey(name)){
+		if (manifest.containsKey(name)) {
 			manifest.remove(name);
 		}
 		manifest.put(name, new PluginInfo(name, version, files));
@@ -176,7 +191,7 @@ public class Plugin implements Comparable<Plugin> {
 			while (entries.hasMoreElements()) {
 				ZipEntry zipEnt = entries.nextElement();
 				if (zipEnt.getName().endsWith(".jar")) {
-					if(BukkitPackageManager.verbose){
+					if (BukkitPackageManager.verbose) {
 						System.out.println("Main jar: " + zipEnt.getName());
 					}
 					File res = copyOut(zip, zipEnt);
@@ -187,7 +202,7 @@ public class Plugin implements Comparable<Plugin> {
 				}
 			}
 		}
-		if(BukkitPackageManager.verbose){
+		if (BukkitPackageManager.verbose) {
 			System.out.println("Reading manifest: " + name + " " + location);
 		}
 		YamlReader reader = new YamlReader(new InputStreamReader(zip.getInputStream(ent)));
@@ -200,7 +215,7 @@ public class Plugin implements Comparable<Plugin> {
 
 	protected File copyOut(ZipFile parent, ZipEntry which) throws IOException {
 		File dest = File.createTempFile("bpm-" + name, null);
-		if(BukkitPackageManager.verbose){
+		if (BukkitPackageManager.verbose) {
 			System.out.println(parent.getName() + "!" + which.getName() + " -> " + dest);
 		}
 		InputStream in = parent.getInputStream(which);
@@ -214,10 +229,10 @@ public class Plugin implements Comparable<Plugin> {
 		out.close();
 		return dest;
 	}
-	
+
 	protected Map<String, PluginInfo> readBpmManifest() throws Exception {
 		File manifestFile = new File(BukkitPackageManager.plugins, "bpm.yml");
-		if(manifestFile.exists() && manifestFile.isFile()){
+		if (manifestFile.exists() && manifestFile.isFile()) {
 			YamlReader reader = new YamlReader(new FileReader(manifestFile));
 			@SuppressWarnings("unchecked")
 			Map<String, PluginInfo> props = (Map<String, PluginInfo>) reader.read();
@@ -227,7 +242,7 @@ public class Plugin implements Comparable<Plugin> {
 			return new HashMap<String, PluginInfo>();
 		}
 	}
-	
+
 	protected void writeBpmManifest(Map<String, PluginInfo> manifest) throws Exception {
 		File manifestFile = new File(BukkitPackageManager.plugins, "bpm.yml");
 		YamlWriter writer = new YamlWriter(new FileWriter(manifestFile));
@@ -287,8 +302,10 @@ public class Plugin implements Comparable<Plugin> {
 		public String name;
 		public String version;
 		public List<String> installedFiles;
-		public PluginInfo(){
+
+		public PluginInfo() {
 		}
+
 		public PluginInfo(String name, String version, List<String> installedFiles) {
 			super();
 			this.name = name;
