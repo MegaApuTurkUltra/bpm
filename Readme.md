@@ -17,3 +17,7 @@ A command-line tool that makes it easy to manage Bukkit (CraftBukkit, Spigot) pl
         list                    List installed packages
         search                  Search bukkit.org for a package
         uninstall               Uninstall packages
+
+## How to use ##
+
+On Windows, copy the contents of `dist/` somewhere onto your `PATH`
