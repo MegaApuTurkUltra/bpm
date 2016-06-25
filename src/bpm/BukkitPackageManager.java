@@ -17,6 +17,8 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 public class BukkitPackageManager {
+	public static final String VERSION = "0.0.2";
+	
 	public static File plugins;
 	public static BufferedReader consoleIn;
 
@@ -37,7 +39,7 @@ public class BukkitPackageManager {
 		for (String pkg : packages) {
 			Plugin p = new Plugin(pkg);
 			try {
-				p.download();
+				p.download(null);
 			} catch (Exception e) {
 				System.out.print('\r');
 				if (verbose) {
@@ -45,6 +47,29 @@ public class BukkitPackageManager {
 				} else {
 					System.err.println(e.getMessage());
 				}
+			}
+		}
+	}
+	
+	@Action(description = "Install a package by its download link (zip or jar)")
+	public static void installByUrl(List<String> packages) throws Exception {
+		StringBuilder pkgBuilder = new StringBuilder();
+		for (String p : packages) {
+			pkgBuilder.append(p);
+			pkgBuilder.append(' ');
+		}
+		pkgBuilder.setLength(Math.max(pkgBuilder.length() - 1, 0));
+		String url = pkgBuilder.toString();
+		
+		Plugin p = new Plugin((String) null);
+		try {
+			p.download(url);
+		} catch (Exception e) {
+			System.out.print('\r');
+			if (verbose) {
+				e.printStackTrace();
+			} else {
+				System.err.println(e.getMessage());
 			}
 		}
 	}
@@ -324,7 +349,7 @@ public class BukkitPackageManager {
 		}
 
 		//@formatter:off
-		System.err.println("\nBukkit Package Manager\n"
+		System.err.println("\nBukkit Package Manager " + VERSION + "\n"
 				+ "\n"
 				+ "Usage: bpm [options] <action> [package [package ...]]\n"
 				+ "\n");

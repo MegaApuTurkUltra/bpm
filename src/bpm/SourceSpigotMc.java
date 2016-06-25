@@ -20,7 +20,7 @@ public class SourceSpigotMc implements Source {
 	public static final String URL_PLUGINS_SERVER = "https://www.spigotmc.org";
 	public static final String URL_PLUGINS_BASE = "https://www.spigotmc.org/resources/";
 	public static final String URL_PLUGINS_SEARCH = "https://www.spigotmc.org/search/1/?t=resource_update&o=relevance&c[rescat]=4+14+15+16+17+18+22+23+24+25+26&q=";
-	public static final String URL_PLUGINS_SEARCH_NAME = "https://www.spigotmc.org/search/1/?t=resource_update&o=relevance&c[title_only]=1&c[rescat]=4+14+15+16+17+18+22+23+24+25+26&q=";
+	public static final String URL_PLUGINS_SEARCH_NAME = "https://www.spigotmc.org/search/1/?t=resource_update&o=relevance&c[title_only]=1&c[rescat]=2+4+5+6+7+8+14+15+16+17+18+22+23+24+25+26&q=";
 	public static final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36";
 
 	@Override

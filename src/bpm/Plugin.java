@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -73,24 +75,60 @@ public class Plugin implements Comparable<Plugin> {
 			writeBpmManifest(manifest);
 		}
 	}
+	
+	protected File downloadByUrl(String download) throws Exception {
+		File dest = File.createTempFile("bpm-" + name, null);
+		HttpURLConnection conn = (HttpURLConnection) new URL(download).openConnection();
+		conn.setRequestProperty("User-Agent", SourceSpigotMc.USER_AGENT);
+		int totalSize = conn.getHeaderFieldInt("Content-Length", -1), currentSize = 0;
+		InputStream in = conn.getInputStream();
+		OutputStream out = new FileOutputStream(dest);
+		byte[] buffer = new byte[1024 * 1024 * 8];
+		int len;
+		while ((len = in.read(buffer)) != -1) {
+			out.write(buffer, 0, len);
+			currentSize += len;
+			if (totalSize != -1) {
+				int percent = (int) (20.0 * currentSize / totalSize);
+				System.out.print("\r[");
+				for (int i = 0; i < 20; i++) {
+					System.out.print(i < percent ? '|' : ' ');
+				}
+				System.out.print("] " + ((int) (100.0 * currentSize / totalSize)) + "%");
+			} else {
+				System.out.print("\r[????????????????????] ?%");
+			}
+		}
+		System.out.println("\r[||||||||||||||||||||] 100%");
+		in.close();
+		out.close();
+		conn.disconnect();
+		return dest;
+	}
 
-	public void download() throws Exception {
+	public void download(String url) throws Exception {
 		if (this.location != null)
 			return;
 
 		System.out.println("Downloading: " + name);
 
 		File temp = null;
-		for (Source src : Source.SOURCES) {
-			try {
-				temp = src.downloadPlugin(name);
-				break;
-			} catch (HttpStatusException e) {
-				if (BukkitPackageManager.verbose) {
-					e.printStackTrace();
+		
+		if(url == null){
+			for (Source src : Source.SOURCES) {
+				try {
+					temp = src.downloadPlugin(name);
+					break;
+				} catch (HttpStatusException e) {
+					if (BukkitPackageManager.verbose) {
+						e.printStackTrace();
+					}
 				}
 			}
+		} else {
+			temp = downloadByUrl(url);
 		}
+		
 		System.out.print("\r                          \n");
 		if (temp == null) {
 			throw new Exception("Plugin not found: " + name);
@@ -98,9 +136,13 @@ public class Plugin implements Comparable<Plugin> {
 
 		String oldName = name;
 		getPackageInfoFromArchive(temp);
-		if (!name.equalsIgnoreCase(oldName)) {
-			throw new Exception("Plugin not found: " + oldName
-					+ " (downloaded plugin '" + name + "' doesn't match)");
+		if (oldName != null && !name.equalsIgnoreCase(oldName)) {
+			System.out.print("Downloaded plugin " + name + " doesn't match " + oldName + ".\n"
+					+ "Continue installing? [y/n] ");
+			String resp = BukkitPackageManager.consoleIn.readLine();
+			if (!resp.toLowerCase().startsWith("y")) {
+				return;
+			}
 		}
 
 		for (Plugin p : Plugin.installed()) {
@@ -183,8 +225,14 @@ public class Plugin implements Comparable<Plugin> {
 	}
 
 	protected PluginInfo getManifest(File jar) throws Exception {
-		ZipFile zip = new ZipFile(jar);
-		ZipEntry ent = zip.getEntry("plugin.yml");
+		ZipFile zip;
+		ZipEntry ent;
+		try {
+			zip = new ZipFile(jar);
+			ent = zip.getEntry("plugin.yml");
+		} catch(Exception e){
+			throw new Exception("Not a valid plugin file, check the download manually", e);
+		}
 		if (ent == null) {
 			type = PluginType.ZIP;
 			Enumeration<? extends ZipEntry> entries = zip.entries();
