@@ -34,6 +34,9 @@ public class BukkitPackageManager {
 	@Switch(longOpt = "force", shortOpt = "f", description = "Overwrite plugins without prompting")
 	public static boolean noPromptOverwrite = false;
 
+	@Switch(longOpt = "purge", shortOpt = "p", description = "Delete plugins data folders after an uninstall")
+	public static boolean purge = false;
+
 	@Action(description = "Install packages for bukkit")
 	public static void install(List<String> packages) throws Exception {
 		for (String pkg : packages) {

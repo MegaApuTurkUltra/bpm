@@ -25,6 +25,7 @@ import org.jsoup.HttpStatusException;
 
 import com.esotericsoftware.yamlbeans.YamlReader;
 import com.esotericsoftware.yamlbeans.YamlWriter;
+import java.util.stream.Stream;
 
 public class Plugin implements Comparable<Plugin> {
 	enum PluginType {
@@ -53,6 +54,19 @@ public class Plugin implements Comparable<Plugin> {
 	public void uninstall() throws Exception {
 		if (location != null) {
 			System.out.println("Uninstalling: " + name + " " + version);
+                        if (BukkitPackageManager.purge) {
+                            File dataFolder = new File(location.getParentFile(), name);
+                            if (dataFolder.exists() && dataFolder.isDirectory()) {
+                                Stream.of(dataFolder.listFiles()).forEach(File::delete);
+
+                                if (!dataFolder.delete()) {
+                                    throw new IOException("Unable to delete folder: " + dataFolder);
+                                }
+
+                                System.out.println("Deleted plugin data folder");
+                            }
+                        }
+
 			if (!location.delete()) {
 				throw new IOException("Unable to delete: " + location);
 			}
